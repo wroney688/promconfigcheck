@@ -1,7 +1,7 @@
 from flask import Flask, Response, request
 from prometheus_client import generate_latest, Info, Gauge, Histogram, Counter, Summary, CONTENT_TYPE_LATEST, start_http_server
 from prometheus_flask_exporter import PrometheusMetrics
-import re, glob, getopt, sys
+import re, glob, getopt, sys, yaml, subprocess
 import xml.etree.ElementTree as etree
 
 METRIC_PREFIX = 'configcheck'
@@ -15,9 +15,10 @@ configCheck = Gauge('{0}'.format(METRIC_PREFIX), 'Config Match==1, Mismatch==0',
 def readModel(modelFile):
     fd = open(modelFile, "r")
     targetline = fd.readline()
-    target = re.match("compareTo\((XML)\):\W*(.*)", targetline)
+    target = re.match("compareTo\((XML|OS)\):\W*(.*)", targetline)
     if target is not None:
         if target.groups()[0] == 'XML': spec = etree.XML(fd.read())
+        if target.groups()[0] == 'OS': spec = yaml.load(fd.read(), Loader=yaml.FullLoader)
         else: spec = None
         return target.groups()[0], target.groups()[1], spec
     else:
@@ -108,7 +109,14 @@ def compareXML(configName, model, actual):
 userID = None
 osMetrics = {}
 
-def grabOSData():
+def compareOS(configname, spec):
+    for checkItem in spec['OS_Values']:
+        print('\tChecking: {0}'.format(checkItem))
+        actualValue = re.search(str(checkItem['regex']), subprocess.run(checkItem['command'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+        if actualValue is None:
+            configCheck.labels(configName, '{0}'.format(checkItem['name'])).set(0)
+        else:
+            configCheck.labels(configName, '{0}'.format(checkItem['name'])).set(1)
     return
 
 def updateConfigReport():
@@ -116,9 +124,8 @@ def updateConfigReport():
         print('\tChecking [{0}]'.format(model))
         type, target, spec = readModel(model)
         if type == 'XML': compareXML(target, spec, etree.XML(open(target, "r").read()))
+        if type == 'OS': compareOS(target, spec)
         else: print('{0} is invalid.'.format(model))
-
-    grabOSData()
 
 @app.route('/metrics', methods=['GET'])
 def metrics():
