@@ -109,7 +109,7 @@ def compareXML(configName, model, actual):
 userID = None
 osMetrics = {}
 
-def compareOS(configname, spec):
+def compareOS(configName, spec):
     for checkItem in spec['OS_Values']:
         print('\tChecking: {0}'.format(checkItem))
         actualValue = re.search(str(checkItem['regex']), subprocess.run(checkItem['command'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
