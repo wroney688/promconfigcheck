@@ -32,3 +32,19 @@ configcheck{configfile="exampleconfig.xml",path="xml.tag"} 1.0
 configcheck{configfile="exampleconfig.xml",path="xml.backends.be(instance3)"} 1.0
 configcheck{configfile="exampleconfig.xml",path="xml.pool[name=db, target=db3](10)"} 0.0
 ```
+#Compare Formats:
+## XML
+compareTo(XML): <filename>
+
+Remainder of the file is an xml model.  
+## OS
+compareTo(OS): localhost
+
+Remainder of the file is YAML with the following model
+```
+OS_Values:
+-  name:
+   command:
+   regex:
+```
+Will spit out a configcheck metric with path=<name>.  The value will be based upon whether the execution of <command> matches the regular expression <regex>
